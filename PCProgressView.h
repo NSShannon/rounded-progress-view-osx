@@ -27,7 +27,6 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-
 @interface PCProgressView : NSView
 
 /// The current progress shown by the receiver.
@@ -37,13 +36,16 @@
 @property (nonatomic, assign) CGFloat progressLineWidth;
 
 /// The progress line color, defaults to light gray.
-@property (nonatomic, strong) NSColor *progressLineColor;
+@property (nonatomic, strong) NSColor* progressLineColor;
 
 /// The line width of the receiver background bar, defaults to 6.0f.
 @property (nonatomic, assign) CGFloat backgroundLineWidth;
 
 /// The background line color, defaults to dark gray.
-@property (nonatomic, strong) NSColor *backgroundLineColor;
+@property (nonatomic, strong) NSColor* backgroundLineColor;
+
+/// The progress text color, defaults to textColor.
+@property (nonatomic, strong) NSColor* progressTextColor;
 
 /// Specifies the basic duration of the animation, in seconds, defaults to 0.4.
 @property (nonatomic, assign) CFTimeInterval duration;

@@ -28,30 +28,31 @@
 //  SOFTWARE.
 
 #import "PCProgressView.h"
-
 #import <QuartzCore/QuartzCore.h>
 
 @implementation PCProgressView
 {
-	CGFloat _currentProgress;
-	CAShapeLayer *_backgroundLineLayer;
-	CAShapeLayer *_progressLineLayer;
+    CGFloat _currentProgress;
+    CAShapeLayer* _backgroundLineLayer;
+    CAShapeLayer* _progressLineLayer;
+    NSTextField* _progressTextField;
 }
 
 #pragma mark - Initializers
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
-    if (self = [super initWithFrame:frame]){
+    if (self = [super initWithFrame:frame])
+    {
         [self setUp];
     }
     return self;
 }
 
-
-- (instancetype)initWithCoder:(NSCoder *)aDecoder
+- (instancetype)initWithCoder:(NSCoder*)aDecoder
 {
-    if (self = [super initWithCoder:aDecoder]){
+    if (self = [super initWithCoder:aDecoder])
+    {
         [self setUp];
     }
     return self;
@@ -68,11 +69,23 @@
     _progressLineColor = [NSColor lightGrayColor];
     _backgroundLineWidth = 6.0f;
     _backgroundLineColor = [NSColor darkGrayColor];
+    _progressTextColor = [NSColor textColor];
 
     _backgroundLineLayer = [CAShapeLayer layer];
     [self.layer addSublayer:_backgroundLineLayer];
+
     _progressLineLayer = [CAShapeLayer layer];
     [self.layer addSublayer:_progressLineLayer];
+
+    _progressTextField = [[NSTextField alloc] initWithFrame:self.bounds];
+    _progressTextField.alignment = NSTextAlignmentCenter;
+    _progressTextField.font = [NSFont boldSystemFontOfSize:16];
+    _progressTextField.textColor = _progressTextColor;
+    _progressTextField.backgroundColor = [NSColor clearColor];
+    _progressTextField.editable = NO;
+    _progressTextField.bezeled = NO;
+    _progressTextField.drawsBackground = NO;
+    [self addSubview:_progressTextField];
 }
 
 #pragma mark - Exposed Methods
@@ -84,40 +97,48 @@
 
 - (void)setProgress:(CGFloat)progress animated:(BOOL)animated
 {
-    // Boundry correctness
-    progress = MIN(progress, 1.0);
-    progress = MAX(progress, 0.0);
-    
+    progress = MIN(1.0, MAX(0.0, progress));
     _progress = progress;
-    
+
     CGFloat borderWidth = MAX(_progressLineWidth, _backgroundLineWidth);
     CGFloat radius = (MIN(self.bounds.size.width, self.bounds.size.height) / 2.0) - borderWidth;
-    CGFloat diameter = (radius * 2.0);
-    CGRect cirlceRect = CGRectMake(NSMidX(self.bounds) - radius, NSMidY(self.bounds) - radius, diameter, diameter);
-    CGPathRef path = [self _createCirclePathRefForRect:cirlceRect];
-    
+    CGFloat diameter = radius * 2.0;
+    CGRect circleRect = CGRectMake(NSMidX(self.bounds) - radius,
+        NSMidY(self.bounds) - radius,
+        diameter,
+        diameter);
+
+    CGPathRef path = [self _createCirclePathRefForRect:circleRect];
+
     _backgroundLineLayer.path = path;
     _backgroundLineLayer.fillColor = [NSColor clearColor].CGColor;
     _backgroundLineLayer.strokeColor = _backgroundLineColor.CGColor;
     _backgroundLineLayer.lineWidth = _backgroundLineWidth;
-    
+
     _progressLineLayer.path = _backgroundLineLayer.path;
-    _progressLineLayer.fillColor = [NSColor clearColor].CGColor;
     _progressLineLayer.strokeColor = _progressLineColor.CGColor;
     _progressLineLayer.lineWidth = _progressLineWidth;
-    
-    CFTimeInterval animationDuration = (animated ? _duration : 0.0);
-    [_progressLineLayer addAnimation:[self _fillAnimationWithDuration:animationDuration] forKey:@"strokeEnd"];
+    _progressLineLayer.fillColor = [NSColor clearColor].CGColor;
+
+    [_progressLineLayer removeAnimationForKey:@"strokeEnd"];
+    _progressLineLayer.strokeEnd = _progress;
+
+    if (animated)
+    {
+        [_progressLineLayer addAnimation:[self _fillAnimationWithDuration:_duration] forKey:@"strokeEnd"];
+    }
+
     _currentProgress = _progress;
+    [self updateProgressText];
 
     CGPathRelease(path);
 }
 
 #pragma mark - Private Methods
 
-- (CABasicAnimation *)_fillAnimationWithDuration:(CFTimeInterval)duration
+- (CABasicAnimation*)_fillAnimationWithDuration:(CFTimeInterval)duration
 {
-    CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];    
+    CABasicAnimation* animation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
     animation.duration = duration;
     animation.removedOnCompletion = NO;
     animation.fillMode = kCAFillModeBoth;
@@ -130,13 +151,14 @@
 - (CGPathRef)_createCirclePathRefForRect:(CGRect)rect
 {
     /**
-     CGPathAddEllipseInRect creates the path in an anticlockwise direction and
-     the "strokeEnd" values/animation is reverted. By creating the path ourselfs we ensure
-     that the direction is clockwise and the animation direction is correct.
+       CGPathAddEllipseInRect creates the path in an anticlockwise direction and
+       the "strokeEnd" values/animation is reverted. By creating the path ourselfs we ensure
+       that the direction is clockwise and the animation direction is correct.
     */
     CGFloat radius = (rect.size.width / 2);
     CGFloat minx = CGRectGetMinX(rect), midx = CGRectGetMidX(rect), maxx = CGRectGetMaxX(rect);
     CGFloat miny = CGRectGetMinY(rect), midy = CGRectGetMidY(rect), maxy = CGRectGetMaxY(rect);
+
     CGMutablePathRef path = CGPathCreateMutable();
     CGPathMoveToPoint(path, NULL, midx + 0.5, maxy + 0.5);
     CGPathAddArcToPoint(path, NULL, maxx + 0.5, maxy + 0.5, maxx + 0.5, midy + 0.5, radius);
@@ -145,6 +167,28 @@
     CGPathAddArcToPoint(path, NULL, minx + 0.5, maxy + 0.5, midx + 0.5, maxy + 0.5, radius);
     CGPathCloseSubpath(path);
     return path;
+}
+
+#pragma mark - Text
+
+- (void)updateProgressText
+{
+    NSInteger percentage = (NSInteger)(_progress * 100);
+    _progressTextField.stringValue = [NSString stringWithFormat:@"%ld%%", percentage];
+
+    CGFloat borderWidth = MAX(_progressLineWidth, _backgroundLineWidth);
+    CGFloat radius = (MIN(self.bounds.size.width, self.bounds.size.height) / 2.0) - borderWidth;
+    CGFloat diameter = radius * 2.0;
+    CGFloat centerX = NSMidX(self.bounds);
+    CGFloat centerY = NSMidY(self.bounds);
+
+    CGFloat textWidth = diameter * 0.6;
+    CGFloat textHeight = diameter * 0.2;
+    CGRect textFrame = CGRectMake(centerX - textWidth / 2.0, centerY - textHeight / 2.0, textWidth, textHeight);
+
+    _progressTextField.frame = textFrame;
+    _progressTextField.font = [NSFont boldSystemFontOfSize:radius * 0.35];
+    _progressTextField.textColor = _progressTextColor ?: [NSColor textColor];
 }
 
 @end
