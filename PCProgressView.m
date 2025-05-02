@@ -65,17 +65,13 @@
     self.wantsLayer = YES;
     _currentProgress = 0.0;
     _duration = 0.4f;
-    _progressLineWidth = 3.0f;
-    _progressLineColor = [NSColor lightGrayColor];
-    _backgroundLineWidth = 6.0f;
-    _backgroundLineColor = [NSColor darkGrayColor];
+    _progressLineWidth = 12.0f;
+    _progressLineColor = [NSColor orangeColor];
+    _backgroundLineWidth = 14.0f;
+    _backgroundLineColor = [NSColor whiteColor];
     _progressTextColor = [NSColor textColor];
 
-    _backgroundLineLayer = [CAShapeLayer layer];
-    [self.layer addSublayer:_backgroundLineLayer];
-
-    _progressLineLayer = [CAShapeLayer layer];
-    [self.layer addSublayer:_progressLineLayer];
+    [self setUpLayers];
 
     _progressTextField = [[NSTextField alloc] initWithFrame:self.bounds];
     _progressTextField.alignment = NSTextAlignmentCenter;
@@ -86,6 +82,21 @@
     _progressTextField.bezeled = NO;
     _progressTextField.drawsBackground = NO;
     [self addSubview:_progressTextField];
+}
+
+- (void)setUpLayers
+{
+    _backgroundLineLayer = [CAShapeLayer layer];
+    _backgroundLineLayer.fillColor = [NSColor clearColor].CGColor;
+    _backgroundLineLayer.strokeColor = _backgroundLineColor.CGColor;
+    _backgroundLineLayer.lineWidth = _backgroundLineWidth;
+    [self.layer addSublayer:_backgroundLineLayer];
+
+    _progressLineLayer = [CAShapeLayer layer];
+    _progressLineLayer.strokeColor = _progressLineColor.CGColor;
+    _progressLineLayer.lineWidth = _progressLineWidth;
+    _progressLineLayer.fillColor = [NSColor clearColor].CGColor;
+    [self.layer addSublayer:_progressLineLayer];
 }
 
 #pragma mark - Exposed Methods
@@ -107,19 +118,10 @@
         NSMidY(self.bounds) - radius,
         diameter,
         diameter);
-
     CGPathRef path = [self _createCirclePathRefForRect:circleRect];
 
     _backgroundLineLayer.path = path;
-    _backgroundLineLayer.fillColor = [NSColor clearColor].CGColor;
-    _backgroundLineLayer.strokeColor = _backgroundLineColor.CGColor;
-    _backgroundLineLayer.lineWidth = _backgroundLineWidth;
-
     _progressLineLayer.path = _backgroundLineLayer.path;
-    _progressLineLayer.strokeColor = _progressLineColor.CGColor;
-    _progressLineLayer.lineWidth = _progressLineWidth;
-    _progressLineLayer.fillColor = [NSColor clearColor].CGColor;
-
     [_progressLineLayer removeAnimationForKey:@"strokeEnd"];
     _progressLineLayer.strokeEnd = _progress;
 
@@ -168,8 +170,6 @@
     CGPathCloseSubpath(path);
     return path;
 }
-
-#pragma mark - Text
 
 - (void)updateProgressText
 {
